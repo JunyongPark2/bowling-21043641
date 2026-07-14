@@ -1,46 +1,53 @@
-# Plan: Bowling Game Kata — Step 3
+# Plan: Bowling Game Kata — Step 4
 
 ## 목표 (이번 단계에서 구현할 동작)
 
-**스트라이크(strike)**: 1프레임에서 10핀을 한 번에 치면, 보너스로 다음 2굴림의 핀 수가 더해지고 그 프레임은 굴림 1번으로 끝난다.
+10번째 프레임 필볼(fill ball) 로직 — 단, 사전 확인 결과 현재 `score()` 구현(`range(10)`으로 프레임 수만 제한하고 롤 인덱스를 그대로 따라가는 방식)이 이미 아래 케이스들을 정확히 계산하고 있음을 확인했다:
 
-가장 단순한 스트라이크 케이스: 1프레임 스트라이크, 2프레임에서 3핀 + 4핀, 나머지는 모두 거터인 게임의 점수는 **24점**이다.
+- 퍼펙트 게임(12번 모두 스트라이크) → 300점
+- 10번째 프레임 스페어 + 필볼 1개 → 정상 계산
+- 10번째 프레임 스트라이크 + 필볼 2개 → 정상 계산
 
-- 1프레임: 10 (스트라이크) + 보너스(다음 2굴림: 3, 4) = 17
-- 2프레임: 3 + 4 = 7
-- 나머지 프레임: 0
-- 총합: 17 + 7 = 24
+따라서 이번 단계는 새로운 프로덕션 코드 변경을 위한 RED가 아니라, **이미 만족되는 동작을 회귀 방지용 특성화(characterization) 테스트로 고정**하는 것이 목표다.
 
 ## 무엇을 테스트할 것인가
 
-- `test_game.py`에 `test_strike_adds_next_two_rolls_as_bonus` 테스트 추가
+- `test_game.py`에 다음 3개 테스트 추가 (모두 코드 변경 없이 통과할 것으로 예상됨 — 특성화 테스트)
 
 ```python
-def test_strike_adds_next_two_rolls_as_bonus():
+def test_perfect_game_scores_300():
     game = Game()
-    game.roll(10)  # strike
-    game.roll(3)
-    game.roll(4)
-    for _ in range(16):
+    for _ in range(12):
+        game.roll(10)
+    assert game.score() == 300
+
+
+def test_tenth_frame_spare_with_fill_ball():
+    game = Game()
+    for _ in range(18):
         game.roll(0)
-    assert game.score() == 24
+    game.roll(5)
+    game.roll(5)
+    game.roll(3)
+    assert game.score() == 13
+
+
+def test_tenth_frame_strike_with_two_fill_balls():
+    game = Game()
+    for _ in range(18):
+        game.roll(0)
+    game.roll(10)
+    game.roll(4)
+    game.roll(5)
+    assert game.score() == 19
 ```
 
-## RED 검증 예상
+## 검증 방식
 
-- 현재 `score()`는 두 굴림씩 프레임으로 묶어 순회하므로, 스트라이크 프레임(굴림 1개)에서도 다음 굴림을 같은 프레임의 두 번째 굴림으로 잘못 취급해 인덱스가 어긋나고 잘못된 값을 반환한다.
-- 기대값 24와 다른 값이 나와 실패 → 진짜 RED.
-
-## 어떻게 구현할 것인가 (GREEN 단계 예상 — 최소 구현)
-
-- `score()` 프레임 순회 로직에서, 첫 굴림이 10(스트라이크)이면:
-  - 보너스로 다음 2굴림을 더한다
-  - 인덱스는 1칸만 전진(그 프레임은 굴림 1개만 사용)
-- 스페어 판정은 스트라이크가 아닌 경우에만 수행
+- 통상적인 RED → GREEN이 아니라, 테스트 추가 직후 바로 `pytest` 실행해 **처음부터 통과**하는지 확인한다 (예상대로 통과하면 이는 실패가 아니라 "이미 충족된 동작을 문서화"하는 것임을 재확인하는 것).
+- 프로덕션 코드(`game.py`) 변경 없음.
 
 ## 이번 단계에서 다루지 않는 것 (범위 제외)
 
-- 10번째 프레임 필볼 로직 (스트라이크/스페어 시 추가 굴림 허용)
 - 입력값 검증
-
-이 항목은 이후 단계에서 별도의 Plan.md로 진행합니다.
+- 이 이후 다음 목표는 새로운 실제 동작(예: 여러 프레임 조합, 연속 스트라이크/스페어 혼합 게임 등 아직 다루지 않은 시나리오)을 찾아 진짜 RED가 발생하는 케이스로 진행한다.
