@@ -6,3 +6,14 @@ def test_gutter_game_scores_zero():
     for _ in range(20):
         game.roll(0)
     assert game.score() == 0
+
+
+def test_spare_adds_next_roll_as_bonus():
+    game = Game()
+    game.roll(5)
+    game.roll(5)   # spare
+    game.roll(3)
+    game.roll(0)
+    for _ in range(16):
+        game.roll(0)
+    assert game.score() == 16
